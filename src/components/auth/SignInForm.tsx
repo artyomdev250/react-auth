@@ -42,7 +42,7 @@ function SignInForm() {
             </button>
             <center>
                 <p className="mt-6 text-[15px] text-neutral-400 font-medium">
-                    Already have an account? <Link className="text-neutral-200" to="/signup">Log in</Link>
+                    Don't Have An Account? <Link className="text-neutral-200" to="/signup">Sign Up</Link>
                 </p>
             </center>
         </form>
