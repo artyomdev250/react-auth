@@ -1,25 +1,75 @@
 import { useState } from "react";
+import type { FormEvent } from "react";
 
-import { Link } from "react-router-dom"
+import { Link, useNavigate, useLocation } from "react-router-dom"
 import { IconContext } from "react-icons"
 
-import { FaRegEye } from "react-icons/fa6";
-import { FaRegEyeSlash } from "react-icons/fa6";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa6";
+
+import client from "../../api/client";
+import { useAuth } from "../../context/AuthContext";
+
+type SignInResponse = {
+    message: string;
+    accessToken: string;
+    refreshToken: string;
+};
 
 function SignInForm() {
-    const [showPassword, setShowPassword] = useState<boolean>(false);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const { setAuthTokens } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation() as any;
+    const from = location.state?.from?.pathname || "/";
+
+    const handleSubmit = async (e: FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
+
+        try {
+            const res = await client.post<SignInResponse>("/api/auth/signin", {
+                email,
+                password,
+            });
+
+            const { accessToken, refreshToken } = res.data;
+
+            setAuthTokens({ accessToken, refreshToken });
+
+            navigate(from, { replace: true });
+        } catch (err: any) {
+            const msg =
+                err?.response?.data?.message || "Failed to sign in. Check credentials.";
+            setError(msg);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const toggleShowPassword = () => {
         setShowPassword(!showPassword);
     }
 
     return (
-        <form className="w-[450px]">
+        <form className="w-[450px]" onSubmit={handleSubmit}>
             <p className="font-bold text-2xl">Enter an account</p>
             <div className="my-8 flex flex-col gap-6">
                 <div>
                     <p className="mb-3 text-[15px] font-medium text-neutral-300">Email</p>
-                    <input className="w-full focus:border-blue-600 transition-colors text-[15px] font-medium outline-0 p-[17px] border-neutral-800 border-2 rounded-[10px]" type="text" placeholder="Enter your email" />
+                    <input
+                        className="w-full focus:border-blue-600 transition-colors text-[15px] font-medium outline-0 p-[17px] border-neutral-800 border-2 rounded-[10px]"
+                        type="text"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
                 </div>
                 <div>
                     <p className="mb-3 text-[15px] font-medium text-neutral-300">Password</p>
@@ -28,6 +78,9 @@ function SignInForm() {
                             className="w-full outline-0 text-[15px] font-medium p-[17px]"
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
                         />
                         <button type="button" onClick={toggleShowPassword}>
                             <IconContext.Provider value={{ className: "eye" }}>
@@ -37,8 +90,17 @@ function SignInForm() {
                     </div>
                 </div>
             </div>
-            <button className="w-full bg-blue-600 cursor-pointer hover:bg-blue-700 transition-colors py-[17px] rounded-[10px] font-bold text-[15px]">
-                Enter account
+
+            {error && (
+                <p className="mb-3 text-sm text-red-400 font-medium">{error}</p>
+            )}
+
+            <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 cursor-pointer hover:bg-blue-700 transition-colors py-3 rounded font-medium mt-4 disabled:opacity-60"
+            >
+                {loading ? "Signing in..." : "Enter account"}
             </button>
             <center>
                 <p className="mt-6 text-[15px] text-neutral-400 font-medium">
