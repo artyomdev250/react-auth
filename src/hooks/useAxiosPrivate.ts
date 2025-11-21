@@ -3,38 +3,53 @@ import axios, { AxiosError } from "axios";
 import client from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
+const STORAGE_KEY = "authTokens";
+
 // dedicated instance ONLY for authenticated requests
 const axiosPrivate = axios.create({
     baseURL: client.defaults.baseURL,
 });
 
+type StoredTokens = {
+    accessToken: string | null;
+    refreshToken: string | null;
+};
+
+function getStoredTokens(): StoredTokens {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { accessToken: null, refreshToken: null };
+    try {
+        return JSON.parse(raw) as StoredTokens;
+    } catch {
+        localStorage.removeItem(STORAGE_KEY);
+        return { accessToken: null, refreshToken: null };
+    }
+}
+
 export default function useAxiosPrivate() {
-    const { accessToken, refreshToken, setAuthTokens, clearAuth } = useAuth();
+    const { setAuthTokens, clearAuth } = useAuth();
 
     useEffect(() => {
-        // attach Authorization header
+        // REQUEST interceptor – always read latest token
         const reqInterceptor = axiosPrivate.interceptors.request.use(
             (config) => {
+                const { accessToken } = getStoredTokens();
+
                 if (accessToken) {
-                    if (
-                        config.headers &&
-                        typeof (config.headers as any).set === "function"
-                    ) {
-                        (config.headers as any).set(
-                            "Authorization",
-                            `Bearer ${accessToken}`
-                        );
+                    if (config.headers && typeof (config.headers as any).set === "function") {
+                        (config.headers as any).set("Authorization", `Bearer ${accessToken}`);
                     } else {
                         config.headers = config.headers ?? {};
                         (config.headers as any)["Authorization"] = `Bearer ${accessToken}`;
                     }
                 }
+
                 return config;
             },
-            (error) => Promise.reject(error)
+            (error) => Promise.reject(error),
         );
 
-        // handle 401 -> refresh -> retry
+        // RESPONSE interceptor – refresh then retry once
         const resInterceptor = axiosPrivate.interceptors.response.use(
             (response) => response,
             async (error: AxiosError) => {
@@ -52,6 +67,8 @@ export default function useAxiosPrivate() {
                     typeof originalRequest?.url === "string" &&
                     originalRequest.url.includes("/api/auth/refresh");
 
+                const { refreshToken } = getStoredTokens();
+
                 if (!refreshToken || originalRequest._retry || isRefreshRequest) {
                     clearAuth();
                     return Promise.reject(error);
@@ -60,34 +77,36 @@ export default function useAxiosPrivate() {
                 originalRequest._retry = true;
 
                 try {
-                    // refresh with *plain* client (no interceptors!)
+                    // call /refresh WITHOUT axiosPrivate (no interceptors)
                     const res = await client.post("/api/auth/refresh", {
                         refreshToken,
                     });
 
                     const newAccessToken = (res.data as any).accessToken;
+
                     if (!newAccessToken) {
                         clearAuth();
                         return Promise.reject(error);
                     }
 
+                    // update context + localStorage
                     setAuthTokens({
                         accessToken: newAccessToken,
                         refreshToken,
                     });
 
+                    // make sure retry request carries the new token explicitly
                     if (
                         originalRequest.headers &&
                         typeof originalRequest.headers.set === "function"
                     ) {
                         originalRequest.headers.set(
                             "Authorization",
-                            `Bearer ${newAccessToken}`
+                            `Bearer ${newAccessToken}`,
                         );
                     } else {
                         originalRequest.headers = originalRequest.headers ?? {};
-                        originalRequest.headers["Authorization"] =
-                            `Bearer ${newAccessToken}`;
+                        originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
                     }
 
                     return axiosPrivate(originalRequest);
@@ -95,14 +114,14 @@ export default function useAxiosPrivate() {
                     clearAuth();
                     return Promise.reject(refreshErr);
                 }
-            }
+            },
         );
 
         return () => {
             axiosPrivate.interceptors.request.eject(reqInterceptor);
             axiosPrivate.interceptors.response.eject(resInterceptor);
         };
-    }, [accessToken, refreshToken, setAuthTokens, clearAuth]);
+    }, [setAuthTokens, clearAuth]);
 
     return axiosPrivate;
 }
