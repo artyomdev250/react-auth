@@ -1,5 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 type AuthState = {
     accessToken: string | null;
@@ -21,7 +20,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accessToken: null,
         refreshToken: null,
     });
-
     const [initializing, setInitializing] = useState(true);
 
     useEffect(() => {

@@ -1,12 +1,13 @@
 import "./App.css";
 
 import { Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import RequireAuth from "./components/auth/RequireAuth";
 
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
 import Home from "./pages/Home";
+
+import RequireAuth from "./components/auth/RequireAuth";
+import { AuthProvider } from "./context/AuthContext";
 
 function App() {
   return (

@@ -22,9 +22,7 @@ function Home() {
 
                 const data = res.data as any;
                 const userData = data.user || data;
-                if (isMounted) {
-                    setUser(userData);
-                }
+                if (isMounted) setUser(userData);
             } catch (err: any) {
                 if (err?.code === "ERR_CANCELED") return;
                 console.error(err);
