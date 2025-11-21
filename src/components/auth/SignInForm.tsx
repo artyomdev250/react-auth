@@ -21,6 +21,7 @@ function SignInForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
 
     const { setAuthTokens } = useAuth();
     const navigate = useNavigate();
@@ -30,6 +31,13 @@ function SignInForm() {
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError(null);
+        setSubmitted(true);
+
+        // client-side validation
+        if (!email || !password) {
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -39,9 +47,7 @@ function SignInForm() {
             });
 
             const { accessToken, refreshToken } = res.data;
-
             setAuthTokens({ accessToken, refreshToken });
-
             navigate(from, { replace: true });
         } catch (err: any) {
             const msg =
@@ -51,6 +57,9 @@ function SignInForm() {
             setLoading(false);
         }
     };
+
+    const emailHasError = submitted && !email;
+    const passwordHasError = submitted && !password;
 
     const toggleShowPassword = () => {
         setShowPassword(!showPassword);
@@ -63,24 +72,35 @@ function SignInForm() {
                 <div>
                     <p className="mb-3 text-[15px] font-medium text-neutral-300">Email</p>
                     <input
-                        className="w-full focus:border-blue-600 transition-colors text-[15px] font-medium outline-0 p-[17px] border-neutral-800 border-2 rounded-[10px]"
+                        className={`w-full text-[15px] font-medium outline-0 p-[17px] border-2 rounded-[10px] transition-colors
+            ${emailHasError
+                                ? "border-red-400"
+                                : "border-neutral-800 focus:border-blue-600"}`}
                         type="text"
                         placeholder="Enter your email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        required
                     />
+                    {emailHasError && (
+                        <p className="mt-3 text-[15px] font-medium text-red-400">
+                            Fill up the field
+                        </p>
+                    )}
                 </div>
                 <div>
                     <p className="mb-3 text-[15px] font-medium text-neutral-300">Password</p>
-                    <div className="group flex items-center gap-[8.5px] border-2 border-neutral-800 rounded-[10px] pr-[17px] focus-within:border-blue-600 transition-colors">
+                    <div
+                        className={`group flex items-center gap-[8.5px] border-2 rounded-[10px] pr-[17px] transition-colors
+            ${passwordHasError
+                                ? "border-red-400"
+                                : "border-neutral-800 focus-within:border-blue-600"}`}
+                    >
                         <input
                             className="w-full outline-0 text-[15px] font-medium p-[17px]"
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            required
                         />
                         <button type="button" onClick={toggleShowPassword}>
                             <IconContext.Provider value={{ className: "eye" }}>
@@ -88,11 +108,16 @@ function SignInForm() {
                             </IconContext.Provider>
                         </button>
                     </div>
+                    {passwordHasError && (
+                        <p className="mt-3 text-[15px] font-medium text-red-400">
+                            Fill up the field
+                        </p>
+                    )}
                 </div>
             </div>
 
             {error && (
-                <p className="mb-3 text-sm text-red-400 font-medium">{error}</p>
+                <p className="mb-3 text-sm p-3 bg-red-200 rounded text-red-600 font-medium">{error}</p>
             )}
 
             <button
