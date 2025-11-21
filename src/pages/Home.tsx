@@ -52,6 +52,11 @@ function Home() {
             <h1 className="text-2xl font-semibold">
                 Welcome{user?.nickname ? `, ${user.nickname}` : ""}!
             </h1>
+            <center>
+                <button className="mt-4 px-4 py-2 bg-red-700 cursor-pointer transition-colors hover:bg-red-800 rounded text-white font-medium">
+                    Log out
+                </button>
+            </center>
         </div>
     );
 }
