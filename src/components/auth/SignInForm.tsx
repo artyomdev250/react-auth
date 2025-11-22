@@ -117,7 +117,7 @@ function SignInForm() {
             </div>
 
             {error && (
-                <p className="mb-3 text-sm p-3 bg-red-200 rounded text-red-600 font-medium">{error}</p>
+                <p className="mb-4 text-sm p-3 bg-red-200 rounded text-red-600 font-medium">{error}</p>
             )}
 
             <button
